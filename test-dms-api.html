@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Node-RED DMS API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Node-RED DMS API Test Page</h1>
+
+    <div class="test-section">
+        <h2>Token Setup</h2>
+        <p>Current Token: <span id="currentToken">Not set</span></p>
+        <input type="text" id="tokenInput" placeholder="Enter token here" style="width: 400px;">
+        <button onclick="setToken()">Set Token</button>
+        <button onclick="clearToken()">Clear Token</button>
+    </div>
+
+    <div class="test-section">
+        <h2>User API Tests</h2>
+        <button onclick="testGetUserList()">Test getUserList</button>
+        <button onclick="testGetProfile()">Test getProfile</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Protocol API Tests</h2>
+        <button onclick="testGetProtocolList()">Test getProtocolList</button>
+    </div>
+
+    <div id="result"></div>
+
+    <!-- Load the built API files -->
+    <script src="packages/node_modules/@node-red/editor-client/src/js/api/index.js"></script>
+    <script src="packages/node_modules/@node-red/editor-client/src/js/api/user.js"></script>
+    <script src="packages/node_modules/@node-red/editor-client/src/js/api/protocol.js"></script>
+
+    <script>
+        // Mock RED object if not available
+        if (typeof RED === 'undefined') {
+            window.RED = {
+                settings: {
+                    dmsApiEndpoint: 'http://101.35.85.65:8082'
+                }
+            };
+        }
+
+        // Display current token
+        function updateTokenDisplay() {
+            const token = localStorage.getItem('token');
+            document.getElementById('currentToken').textContent = token ? token.substring(0, 20) + '...' : 'Not set';
+        }
+
+        function setToken() {
+            const token = document.getElementById('tokenInput').value;
+            if (token) {
+                localStorage.setItem('token', token);
+                updateTokenDisplay();
+                showResult('Token set successfully', 'success');
+            } else {
+                showResult('Please enter a token', 'error');
+            }
+        }
+
+        function clearToken() {
+            localStorage.removeItem('token');
+            document.getElementById('tokenInput').value = '';
+            updateTokenDisplay();
+            showResult('Token cleared', 'success');
+        }
+
+        function showResult(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = type;
+            if (typeof message === 'object') {
+                resultDiv.textContent = JSON.stringify(message, null, 2);
+            } else {
+                resultDiv.textContent = message;
+            }
+        }
+
+        async function testGetUserList() {
+            showResult('Testing getUserList...');
+            try {
+                const result = await window.UserAPI.getUserList({
+                    pageNum: '1',
+                    limit: '10'
+                });
+                showResult(result, 'success');
+            } catch (error) {
+                showResult('Error: ' + error.message + '\n\n' + error.stack, 'error');
+            }
+        }
+
+        async function testGetProfile() {
+            showResult('Testing getProfile...');
+            try {
+                const result = await window.UserAPI.getProfile('6e01b808-6841-11f0-94bb-5254008c2c02');
+                showResult(result, 'success');
+            } catch (error) {
+                showResult('Error: ' + error.message + '\n\n' + error.stack, 'error');
+            }
+        }
+
+        async function testGetProtocolList() {
+            showResult('Testing getProtocolList...');
+            try {
+                const result = await window.ProtocolAPI.getProtocolList({
+                    pageNum: '1',
+                    limit: '10'
+                });
+                showResult(result, 'success');
+            } catch (error) {
+                showResult('Error: ' + error.message + '\n\n' + error.stack, 'error');
+            }
+        }
+
+        // Initialize
+        updateTokenDisplay();
+        showResult('Ready to test. Please set a token first if you haven\'t already.');
+    </script>
+</body>
+</html>
