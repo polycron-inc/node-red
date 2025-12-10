@@ -10,7 +10,7 @@
     },
     "private": "true",
     "scripts": {
-        "start": "node packages/node_modules/node-red/red.js",
+        "start": "node packages/node_modules/node-red/red.js -s packages/node_modules/node-red/settings.js",
         "test": "grunt",
         "build": "grunt build",
         "dev": "grunt dev",
@@ -30,6 +30,7 @@
         "acorn-walk": "8.3.4",
         "ajv": "8.17.1",
         "async-mutex": "0.5.0",
+        "axios": "^1.13.2",
         "basic-auth": "2.0.1",
         "bcryptjs": "3.0.2",
         "body-parser": "1.20.3",
