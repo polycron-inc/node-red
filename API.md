@@ -8,6 +8,7 @@ let RED = require("node-red");
 ```
 
 
+
 Module | Description
 -------|-------
 [node-red](node-red.html) | the main module that pulls together all of the internal modules and provides the executable version of Node-RED
