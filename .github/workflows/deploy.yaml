@@ -19,6 +19,26 @@ jobs:
           DOCKER_BUILDKIT=1 docker build -t fms/node-red:latest .
       - name: Push the Docker image
         run: |
-          cd /home/linuxuser/workspace/fms
+          # 動態尋找 compose.yml 所在目錄
+          COMPOSE_DIR=""
+          for candidate in \
+            "/www/fms" \
+            "/opt/fms" \
+            "$GITHUB_WORKSPACE/.." \
+            "$GITHUB_WORKSPACE"; do
+            if [ -f "$candidate/compose.yml" ] || [ -f "$candidate/compose.yaml" ]; then
+              COMPOSE_DIR="$candidate"
+              break
+            fi
+          done
+
+          if [ -z "$COMPOSE_DIR" ]; then
+            echo "❌ 找不到 compose.yml/compose.yaml，請確認部署目錄"
+            ls -la "$GITHUB_WORKSPACE" || true
+            exit 1
+          fi
+
+          echo "✅ 使用部署目錄: $COMPOSE_DIR"
+          cd "$COMPOSE_DIR"
           docker compose down node-red
           docker compose up -d node-red
