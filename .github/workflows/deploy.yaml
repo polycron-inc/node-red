@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Deploy Node-RED
 
 on:
   push:
@@ -10,21 +10,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: self-hosted
     steps:
+      # 清理工作目錄（修復 self-hosted runner root 權限殘留）
+      - name: 清理工作目錄
+        run: |
+          if [ -d "$GITHUB_WORKSPACE" ]; then
+            sudo rm -rf "$GITHUB_WORKSPACE"/* "$GITHUB_WORKSPACE"/.[!.]* 2>/dev/null || true
+          fi
+
       - uses: actions/checkout@v4
-      - name: Build the Docker image
+
+      # 偵測 Docker 環境（支援 colima / 原生 Docker）
+      - name: 設定 Docker 環境
         run: |
-          DOCKER_BUILDKIT=1 docker build -t fms/node-red:latest .
-      - name: Push the Docker image
+          if [ -S "$HOME/.colima/default/docker.sock" ]; then
+            echo "DOCKER_HOST=unix://$HOME/.colima/default/docker.sock" >> $GITHUB_ENV
+          elif [ -S "$HOME/.colima/docker.sock" ]; then
+            echo "DOCKER_HOST=unix://$HOME/.colima/docker.sock" >> $GITHUB_ENV
+          fi
+          docker info
+
+      # 建置 Node-RED Docker 映像
+      - name: 建置 Node-RED 映像
         run: |
+          DOCKER_BUILDKIT=1 docker build -t fms/node-red:latest "$GITHUB_WORKSPACE"
+
+      # 重啟 Node-RED 服務
+      - name: 重啟 Node-RED 服務
+        run: |
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+
           # 動態尋找 compose.yml 所在目錄
           COMPOSE_DIR=""
           for candidate in \
+            "/www/fms/node-red" \
             "/www/fms" \
             "/opt/fms" \
-            "$GITHUB_WORKSPACE/.." \
             "$GITHUB_WORKSPACE"; do
             if [ -f "$candidate/compose.yml" ] || [ -f "$candidate/compose.yaml" ]; then
               COMPOSE_DIR="$candidate"
@@ -34,11 +57,36 @@ jobs:
 
           if [ -z "$COMPOSE_DIR" ]; then
             echo "❌ 找不到 compose.yml/compose.yaml，請確認部署目錄"
+            echo "目前目錄內容："
             ls -la "$GITHUB_WORKSPACE" || true
             exit 1
           fi
 
           echo "✅ 使用部署目錄: $COMPOSE_DIR"
           cd "$COMPOSE_DIR"
-          docker compose down node-red
-          docker compose up -d node-red
+
+          # 相容 docker compose v2 / docker-compose v1
+          if docker compose version >/dev/null 2>&1; then
+            docker compose up -d --force-recreate node-red
+          elif command -v docker-compose >/dev/null 2>&1; then
+            docker-compose up -d --force-recreate node-red
+          else
+            echo "❌ 找不到 docker compose 或 docker-compose"
+            exit 1
+          fi
+
+      # 健康檢查：等待 Node-RED 啟動
+      - name: 健康檢查
+        run: |
+          echo "等待 Node-RED 啟動..."
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:1880/settings >/dev/null 2>&1; then
+              echo "✅ Node-RED 啟動成功（第 ${i} 次嘗試）"
+              exit 0
+            fi
+            echo "等待 Node-RED 啟動... ($i/30)"
+            sleep 2
+          done
+          echo "❌ Node-RED 啟動失敗，輸出容器日誌："
+          docker logs node-red --tail 200 || true
+          exit 1

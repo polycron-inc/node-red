@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# GitHub Actions
+.github
+
+# Node modules（建置時重新安裝）
+node_modules
+packages/node_modules/*/node_modules
+
+# 測試與開發檔案
+test
+coverage
+.nyc_output
+
+# 文件
+*.md
+LICENSE
+
+# IDE 與編輯器
+.vscode
+.idea
+*.swp
+*.swo
+
+# Docker 相關（避免遞迴）
+Dockerfile
+docker-compose*
+compose.*
+.dockerignore
+
+# 日誌與暫存
+*.log
+tmp

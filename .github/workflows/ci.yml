@@ -17,13 +17,34 @@ jobs:
   node-red-ci:
     runs-on: self-hosted
     steps:
+      # 清理工作目錄（修復 self-hosted runner root 權限殘留）
+      - name: 清理工作目錄
+        run: |
+          if [ -d "$GITHUB_WORKSPACE" ]; then
+            sudo rm -rf "$GITHUB_WORKSPACE"/* "$GITHUB_WORKSPACE"/.[!.]* 2>/dev/null || true
+          fi
+
       - uses: actions/checkout@v4
+
       - name: 設定 Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+
       - name: 安裝依賴
         run: npm install --no-audit --no-fund
+
+      - name: 建置
+        run: npm run build
+
       - name: 測試
         run: npm test
+
+      # 清理 node_modules（避免 self-hosted runner 殘留）
+      - name: 清理建置產物
+        if: always()
+        run: |
+          sudo rm -rf "$GITHUB_WORKSPACE"/node_modules \
+                       "$GITHUB_WORKSPACE"/packages/node_modules/*/node_modules \
+                       2>/dev/null || true

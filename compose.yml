@@ -1,0 +1,18 @@
+services:
+  node-red:
+    image: fms/node-red:latest
+    container_name: node-red
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Taipei
+    volumes:
+      # 持久化 Node-RED 使用者資料（flows、credentials 等）
+      - '/www/fms/node-red-data:/data'
+    ports:
+      - '1880:1880'
+    networks:
+      - fms_default
+
+networks:
+  fms_default:
+    external: true
